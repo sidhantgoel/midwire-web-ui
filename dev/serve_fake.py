@@ -19,6 +19,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from dev import fake_sysfs  # noqa: E402
+from dev.fake_system_helper import FakeSystemHelper  # noqa: E402
 
 
 def main() -> None:
@@ -39,6 +40,10 @@ def main() -> None:
         (root / "etc" / "injection.json").write_text("{}")
         (root / "etc" / "mouse-swap.json").write_text("{}")
         (root / "raw-gadget").touch()
+        # A device fresh from the image: the hotspot still has the default
+        # password (the fake nmcli's is "initial-pass"), and no login user.
+        (root / "etc" / "firstboot.conf").write_text("HOTSPOT_DEFAULT_PASSWORD=initial-pass" + chr(10))
+        FakeSystemHelper(root / "sys.sock")
         (root / "captures" / "20261122-140000_046d_c52b.pcap").write_bytes(b"\0" * 48_213)
 
         def fake(name: str) -> tuple[str, str]:
@@ -61,6 +66,8 @@ def main() -> None:
             journalctl=fake("journalctl"),
             nmcli=fake("nmcli"),
             update_status_file=root / "lib" / "update.json",
+            system_socket=root / "sys.sock",
+            firstboot_conf=root / "etc" / "firstboot.conf",
         )
         uvicorn.run(create_app(settings), host=settings.host, port=settings.port, log_level="info")
 

@@ -84,6 +84,12 @@ class Authenticator:
     def uses_default_password(self) -> bool:
         return self.stored_hash() is None
 
+    @property
+    def is_weak(self) -> bool:
+        """Still the default, or empty: anyone who can reach the page can
+        log in. Some settings are refused until this changes."""
+        return self.uses_default_password or self._matches("")
+
     def _matches(self, password: str) -> bool:
         stored = self.stored_hash()
         if stored is None:

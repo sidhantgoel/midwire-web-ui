@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import __version__, netinfo, service, updates
+from . import __version__, netinfo, service, system, updates
 from .auth import (
     DEFAULT_PASSWORD,
     MIN_PASSWORD_LENGTH,
@@ -142,6 +142,70 @@ def create_app(settings: Settings | None = None, *, watch_devices: bool = True) 
             "preferences": store.load().model_dump(),
             "autostart": autostarter.last,
         }
+
+    # --- first-login setup wizard --------------------------------------------
+
+    @api.get("/setup")
+    def setup_status() -> dict:
+        """What is still on its factory default. The wizard after login
+        offers to change these, and the page reminds until they are."""
+        return {
+            "admin_password_default": authenticator.uses_default_password,
+            "hotspot_password_default": network.hotspot_uses_default_password(),
+        }
+
+    # --- SSH and login accounts ----------------------------------------------
+
+    def need_real_admin_password() -> None:
+        # With these, whoever can log in to the page can get a root shell on
+        # the device. So the page login must not be the default or empty.
+        if authenticator.is_weak:
+            raise HTTPException(
+                status_code=400,
+                detail="Change the admin password first. It is still the default or empty.",
+            )
+
+    def system_view() -> dict:
+        return {**system.status(settings), "locked": authenticator.is_weak}
+
+    @api.get("/system")
+    def system_status() -> dict:
+        return system_view()
+
+    @api.put("/system/ssh")
+    def system_ssh(request: system.SshRequest) -> dict:
+        try:
+            system.set_ssh(settings, request)
+        except service.RequestError as exc:
+            raise bad_request(exc) from exc
+        return system_view()
+
+    @api.post("/system/password")
+    def system_password(request: system.SystemPasswordRequest) -> dict:
+        need_real_admin_password()
+        try:
+            answer = system.set_password(settings, request)
+        except service.RequestError as exc:
+            raise bad_request(exc) from exc
+        return {"created": answer.get("created") is True, **system_view()}
+
+    @api.post("/system/keys")
+    def system_add_key(request: system.KeyRequest) -> dict:
+        need_real_admin_password()
+        try:
+            system.add_key(settings, request)
+        except service.RequestError as exc:
+            raise bad_request(exc) from exc
+        return system_view()
+
+    @api.post("/system/keys/remove")
+    def system_remove_key(request: system.KeyRemoveRequest) -> dict:
+        need_real_admin_password()
+        try:
+            system.remove_key(settings, request)
+        except service.RequestError as exc:
+            raise bad_request(exc) from exc
+        return system_view()
 
     # --- software updates ----------------------------------------------------
 

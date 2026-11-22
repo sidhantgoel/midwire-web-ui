@@ -1,3 +1,15 @@
+midwire-web-ui (0.3.0) unstable; urgency=medium
+
+  * Setup wizard after login while the admin password or the Wi-Fi
+    hotspot's password is still the factory default, with a reminder on
+    the page for whatever is skipped.
+  * Settings: turn SSH on or off, set a system user's password (creating
+    the user on a device that has none) and manage that user's SSH keys.
+    Passwords and keys are refused while the admin password is the default
+    or empty. The work is done by the helper in midwire-base 0.3.0.
+
+ -- Sidhant Goel <sidhant@hexcod.in>  Mon, 23 Nov 2026 00:30:00 +0000
+
 midwire-web-ui (0.2.0) unstable; urgency=medium
 
   * Updates tab: shows installed and available versions of Midwire's

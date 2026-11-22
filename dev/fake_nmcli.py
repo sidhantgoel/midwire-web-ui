@@ -29,15 +29,19 @@ args = sys.argv[1:]
 with open(state_dir / "nmcli.log", "a") as log:
     log.write(json.dumps(args) + "\n")
 
-# Drop the global options the app uses.
+# Drop the global options the app uses. "-g FIELD" asks for one value.
 words = []
 skip = False
+get_field = None
 for i, arg in enumerate(args):
     if skip:
         skip = False
     elif arg in ("-f", "--wait"):
         skip = True
-    elif arg != "-t":
+    elif arg == "-g":
+        skip = True
+        get_field = args[i + 1]
+    elif arg not in ("-t", "-s"):
         words.append(arg)
 
 conns = state["connections"]
@@ -65,7 +69,10 @@ elif words[:2] == ["connection", "show"]:
     if name not in conns:
         print(f"Error: {name} - no such connection profile.", file=sys.stderr)
         sys.exit(10)
-    print(f"802-11-wireless.ssid:{escape(conns[name]['ssid'])}")
+    if get_field == "802-11-wireless-security.psk":
+        print(conns[name].get("psk") or "")
+    else:
+        print(f"802-11-wireless.ssid:{escape(conns[name]['ssid'])}")
 elif words[:2] == ["connection", "add"]:
     pairs = dict(zip(words[2::2], words[3::2]))
     conns[pairs["con-name"]] = {

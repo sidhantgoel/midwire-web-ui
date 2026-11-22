@@ -6,10 +6,11 @@ What it does:
 
 - **Proxy.** Lists the USB devices on the Pi's host ports, lets you hide interfaces and pick options, then starts and stops `usb-proxy.service`. Shows the proxy's log live and serves the `.pcap` captures it writes.
 - **Settings.** Saved across reboots: start the proxy automatically when a device is plugged in, default options, and the options last used for each device. When auto-start leaves an arriving device alone, the Proxy page says why.
+- **SSH and system login**, in Settings. Turn SSH on or off, set the password of a system user (creating one if the Pi has none) and add or remove that user's SSH keys. Passwords and keys are refused while the page's own admin password is the default or empty, because with them a page login becomes a root login. The work is done by a root helper in `midwire-base`, reached over `/run/midwire/system.sock`.
 - **Updates.** Shows the installed and available versions of Midwire's packages and installs updates. The updating itself is done by the `midwire-base` package (see the midwire repository): this page only starts its two services and shows its status file and log.
 - **Network.** Rename the Wi-Fi hotspot or change its password, or join an existing Wi-Fi network instead. If joining fails, the hotspot comes back.
 
-A new install logs in with `admin` / `admin`. The page offers to change the password after the first login and shows a reminder until it is changed. An empty password is allowed. If the password is lost, run `sudo midwire-web-ui set-password` on the device.
+A new install logs in with `admin` / `admin`. After the first login a short setup wizard offers to change that password and the Wi-Fi hotspot's default password; each step can be skipped, and the page shows a reminder until it is done. An empty password is allowed. If the password is lost, run `sudo midwire-web-ui set-password` on the device.
 
 ## How it is built
 

@@ -49,21 +49,6 @@ export function Login({ defaultPassword, onDone }: { defaultPassword: boolean; o
   );
 }
 
-// Shown right after the first login, while the password is still admin.
-export function FirstLogin({ onChanged, onSkip }: { onChanged: () => Promise<void>; onSkip: () => void }) {
-  return (
-    <div className="access">
-      <h1>Change the default password?</h1>
-      <p>
-        This device still uses the password <code>admin</code>. Anyone who can reach it, over the hotspot or the
-        network, can log in and control the USB proxy.
-      </p>
-      <PasswordForm current="admin" submitLabel="Change password" onChanged={onChanged} />
-      <button className="quiet" onClick={onSkip}>Keep the default for now</button>
-    </div>
-  );
-}
-
 interface PasswordFormProps {
   // Known in advance on first login; otherwise the form asks for it.
   current?: string;

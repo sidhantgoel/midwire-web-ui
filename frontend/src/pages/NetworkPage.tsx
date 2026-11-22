@@ -6,7 +6,7 @@ import type { NetworkStatus, WifiNetwork } from "../types";
 
 const POLL_MS = 5000;
 
-export function NetworkPage() {
+export function NetworkPage({ onChanged }: { onChanged: () => void }) {
   const [status, setStatus] = useState<NetworkStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Shown after asking for a change that will probably cut this connection.
@@ -41,6 +41,9 @@ export function NetworkPage() {
     try {
       await work();
       setPending(text);
+      // The hotspot reminder at the top of the page may no longer apply.
+      // The change is made a moment after the request returns.
+      setTimeout(onChanged, 4000);
     } catch (err) {
       setPending(null);
       setError(message(err));

@@ -15,6 +15,7 @@ read from /proc for a moment. The appliance has no other local users.
 
 from __future__ import annotations
 
+import hmac
 import logging
 import shutil
 import subprocess
@@ -36,6 +37,7 @@ _NMCLI_TIMEOUT = 20
 _CONNECT_WAIT = "30"
 # Time for the HTTP response to leave before the Wi-Fi link changes.
 _SWITCH_DELAY = 1.0
+_QUOTES = "'" + '"'
 
 
 def _check_ssid(value: str) -> str:
@@ -136,6 +138,27 @@ class Network:
         if result.returncode != 0:
             return []
         return [f[1] for f in map(split_terse, result.stdout.splitlines()) if len(f) == 2 and f[1]]
+
+    def hotspot_uses_default_password(self) -> bool:
+        """True while the hotspot still has the password every new device
+        starts with. Compares the real password with the image's default, so
+        it is right however the password was changed."""
+        default = ""
+        try:
+            for line in self._settings.firstboot_conf.read_text().splitlines():
+                name, _, value = line.partition("=")
+                if name.strip() == "HOTSPOT_DEFAULT_PASSWORD":
+                    default = value.strip().strip(_QUOTES)
+        except OSError:
+            return False
+        if not default:
+            return False
+        try:
+            # -s: include secrets. Allowed for this user by the polkit rule.
+            result = self._run("-s", "-g", "802-11-wireless-security.psk", "connection", "show", HOTSPOT)
+        except RequestError:
+            return False
+        return result.returncode == 0 and hmac.compare_digest(result.stdout.strip().encode(), default.encode())
 
     # --- reading -------------------------------------------------------------
 

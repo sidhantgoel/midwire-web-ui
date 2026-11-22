@@ -149,6 +149,39 @@ export interface UpdateStatus {
   } | null;
 }
 
+export interface SshKey {
+  type: string;
+  fingerprint: string;
+  comment: string;
+  // The key line carries options such as command="...", added outside this page.
+  restricted: boolean;
+}
+
+export interface SystemUser {
+  name: string;
+  has_password: boolean;
+  sudo: boolean;
+  keys: SshKey[];
+}
+
+// From midwire-base's system helper, by way of /api/system.
+export interface SystemStatus {
+  // False on a device whose midwire-base has no helper; `reason` says why.
+  supported: boolean;
+  reason?: string;
+  // True while the admin password is the default or empty: passwords and
+  // keys cannot be changed until it is a real one.
+  locked: boolean;
+  ssh?: { installed: boolean; enabled: boolean; running: boolean };
+  users?: SystemUser[];
+}
+
+// What is still on its factory default, for the setup wizard and reminders.
+export interface SetupStatus {
+  admin_password_default: boolean;
+  hotspot_password_default: boolean;
+}
+
 export interface WifiNetwork {
   ssid: string;
   signal: number;

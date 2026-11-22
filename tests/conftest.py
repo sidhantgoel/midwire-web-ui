@@ -13,6 +13,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from dev import fake_sysfs  # noqa: E402
+from dev.fake_system_helper import FakeSystemHelper  # noqa: E402
 from midwire_web_ui import network  # noqa: E402
 from midwire_web_ui.app import create_app  # noqa: E402
 from midwire_web_ui.auth import CSRF_HEADER  # noqa: E402
@@ -47,6 +48,13 @@ class Env:
         (tmp_path / "etc" / "config.json").write_text("{}")
         (tmp_path / "etc" / "injection.json").write_text("{}")
         (tmp_path / "raw-gadget").touch()
+        # The image's default hotspot password. The fake nmcli's hotspot
+        # starts with "initial-pass", so by default it is NOT the default.
+        self.firstboot_conf = tmp_path / "etc" / "firstboot.conf"
+        self.firstboot_conf.write_text("HOTSPOT_PRIORITY=-10" + chr(10) + "HOTSPOT_DEFAULT_PASSWORD=midwire-setup" + chr(10))
+        # Stands in for midwire-base's root helper. A short path: unix
+        # socket paths are limited to about 100 characters.
+        self.helper = FakeSystemHelper(tmp_path / "sys.sock", users=["pi"])
 
         self.settings = Settings(
             host="127.0.0.1",
@@ -65,6 +73,8 @@ class Env:
             journalctl=fake("journalctl"),
             nmcli=fake("nmcli"),
             update_status_file=tmp_path / "lib" / "update.json",
+            system_socket=tmp_path / "sys.sock",
+            firstboot_conf=self.firstboot_conf,
         )
 
     def app(self, **overrides):
@@ -97,8 +107,10 @@ class Env:
 
 
 @pytest.fixture
-def env(tmp_path, monkeypatch) -> Env:
-    return Env(tmp_path, monkeypatch)
+def env(tmp_path, monkeypatch):
+    env = Env(tmp_path, monkeypatch)
+    yield env
+    env.helper.close()
 
 
 @pytest.fixture

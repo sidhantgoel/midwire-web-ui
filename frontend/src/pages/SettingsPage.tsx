@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api, message } from "../api";
 import { OptionFields } from "../components/OptionFields";
+import { SshCard } from "../components/SshCard";
 import { summarize } from "../format";
 import type { AppState, Preferences } from "../types";
 import { PasswordForm } from "./Access";
@@ -13,6 +14,7 @@ export function SettingsPage({ onPasswordChanged }: { onPasswordChanged: () => P
   const [draft, setDraft] = useState<Editable | null>(null);
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [passwordVersion, setPasswordVersion] = useState(0);
 
   const load = useCallback(async (resetDraft: boolean) => {
     try {
@@ -142,11 +144,17 @@ export function SettingsPage({ onPasswordChanged }: { onPasswordChanged: () => P
         )}
       </section>
 
+      <SshCard key={String(passwordVersion)} />
+
       <section className="card">
         <div className="card-head">
           <h2>Admin password</h2>
         </div>
-        <PasswordForm submitLabel="Change password" onChanged={onPasswordChanged} />
+        <PasswordForm submitLabel="Change password" onChanged={async () => {
+          await onPasswordChanged();
+          // The SSH card's lock depends on the admin password: reload it.
+          setPasswordVersion((v) => v + 1);
+        }} />
       </section>
     </>
   );

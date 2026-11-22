@@ -49,6 +49,11 @@ class Settings:
     update_status_file: Path = Path("/var/lib/midwire/update.json")
     update_check_unit: str = "midwire-update-check.service"
     update_install_unit: str = "midwire-update-install.service"
+    # midwire-base's helper for SSH and login accounts.
+    system_socket: Path = Path("/run/midwire/system.sock")
+    # The image's first-boot settings. Read for the hotspot's default
+    # password, to tell whether the user has changed it.
+    firstboot_conf: Path = Path("/etc/midwire/firstboot.conf")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -75,4 +80,6 @@ class Settings:
             update_status_file=Path(_env("UPDATE_STATUS_FILE", "/var/lib/midwire/update.json")),
             update_check_unit=_env("UPDATE_CHECK_UNIT", "midwire-update-check.service"),
             update_install_unit=_env("UPDATE_INSTALL_UNIT", "midwire-update-install.service"),
+            system_socket=Path(_env("SYSTEM_SOCKET", "/run/midwire/system.sock")),
+            firstboot_conf=Path(_env("FIRSTBOOT_CONF", "/etc/midwire/firstboot.conf")),
         )

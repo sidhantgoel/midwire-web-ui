@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { api, message, setLoggedOutHandler } from "./api";
-import { FirstLogin, Login } from "./pages/Access";
+import { Login } from "./pages/Access";
 import { NetworkPage } from "./pages/NetworkPage";
 import { ProxyPage } from "./pages/ProxyPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { SetupWizard } from "./pages/SetupWizard";
 import { UpdatesPage } from "./pages/UpdatesPage";
-import type { Session, UpdateStatus } from "./types";
+import type { Session, SetupStatus, UpdateStatus } from "./types";
 
 type Tab = "proxy" | "settings" | "network" | "updates";
 const TABS: { id: Tab; label: string }[] = [
@@ -16,14 +17,15 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "updates", label: "Updates" },
 ];
 
-// Remembered per browser tab, so "keep the default for now" is asked once
-// per login rather than on every page load.
-const SKIP_KEY = "midwire-skip-password-change";
+// Remembered per browser tab, so the setup wizard is offered once per login
+// rather than on every page load. The reminders stay either way.
+const SKIP_KEY = "midwire-skip-setup";
 // How often to look for a finished daily check, for the dot on the tab.
 const UPDATE_POLL_MS = 60_000;
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [setup, setSetup] = useState<SetupStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("proxy");
   const [skipped, setSkipped] = useState(() => sessionStorage.getItem(SKIP_KEY) === "1");
@@ -31,8 +33,11 @@ export function App() {
 
   const refresh = useCallback(async () => {
     try {
-      setSession(await api.get<Session>("/session"));
+      const fresh = await api.get<Session>("/session");
+      setSession(fresh);
       setError(null);
+      // What is still on a factory default: drives the wizard and reminders.
+      setSetup(fresh.authenticated ? await api.get<SetupStatus>("/setup").catch(() => null) : null);
     } catch (err) {
       setError(message(err));
     }
@@ -70,12 +75,13 @@ export function App() {
     return <Login defaultPassword={session.default_password} onDone={refresh} />;
   }
 
-  const skip = () => {
+  const closeWizard = () => {
     sessionStorage.setItem(SKIP_KEY, "1");
     setSkipped(true);
+    void refresh();
   };
-  if (session.default_password && !skipped) {
-    return <FirstLogin onChanged={refresh} onSkip={skip} />;
+  if (setup && !skipped && (setup.admin_password_default || setup.hotspot_password_default)) {
+    return <SetupWizard setup={setup} onClose={closeWizard} />;
   }
 
   const logout = async () => {
@@ -103,15 +109,21 @@ export function App() {
         </button>
       </header>
       <main>
-        {session.default_password && (
+        {setup?.admin_password_default && (
           <p className="notice warn">
             The admin password is still the default (<code>admin</code>).{" "}
             <button className="link" onClick={() => setTab("settings")}>Change it in Settings</button>
           </p>
         )}
+        {setup?.hotspot_password_default && (
+          <p className="notice warn">
+            The Wi-Fi hotspot still has the password every new Midwire starts with.{" "}
+            <button className="link" onClick={() => setTab("network")}>Change it on the Network tab</button>
+          </p>
+        )}
         {tab === "proxy" && <ProxyPage />}
         {tab === "settings" && <SettingsPage onPasswordChanged={refresh} />}
-        {tab === "network" && <NetworkPage />}
+        {tab === "network" && <NetworkPage onChanged={refresh} />}
         {tab === "updates" && <UpdatesPage onChange={noteUpdates} />}
       </main>
     </>
