@@ -4,6 +4,9 @@ The web UI service runs from boot, so it does the watching itself: one look
 at sysfs a second. A device triggers a start once, when it arrives (or at
 boot if it is already attached). Stopping the proxy by hand therefore does
 not start it again until the device is re-plugged.
+
+Whenever a device arrives and is not started, the reason is recorded for the
+page to show, unless the user's own settings plainly say to ignore it.
 """
 
 from __future__ import annotations
@@ -14,7 +17,7 @@ import time
 
 from . import service
 from .config import Settings
-from .models import ProxyOptions, StartRequest
+from .models import Preferences, ProxyOptions, StartRequest
 from .prefs import PreferenceStore, profile_key
 from .usb import Device, list_devices, list_udcs
 
@@ -27,11 +30,32 @@ _SETTLE_TICKS = 2
 # After a stop from the page, ignore arrivals for a moment: releasing a
 # device can make it re-enumerate, which looks like a fresh plug-in.
 _HOLDOFF_SECONDS = 5.0
+# The same device is not auto-started twice within this time. A device that
+# re-enumerates whenever the proxy exits would otherwise restart it forever.
+_MIN_SECONDS_BETWEEN_STARTS = 10.0
 
 
 def label(device: Device) -> str:
     name = " ".join(p for p in (device.manufacturer, device.product) if p)
     return name or f"{device.vendor_id}:{device.product_id}"
+
+
+def _identity(device: Device) -> str:
+    """Port plus the address the kernel assigned. The address changes on
+    every enumeration, so a device pulled and pushed back in between two
+    looks still counts as newly plugged in."""
+    return f"{device.id}#{device.address}"
+
+
+def _proxied_key(status: dict) -> str | None:
+    """vendor:product of the device the running proxy has, from its arguments."""
+    values = {}
+    for arg in status.get("args") or []:
+        name, _, value = arg.partition("=")
+        values[name] = value
+    if "--vendor_id" in values and "--product_id" in values:
+        return profile_key(values["--vendor_id"], values["--product_id"])
+    return None
 
 
 class Autostarter:
@@ -42,6 +66,7 @@ class Autostarter:
         self._known: set[str] | None = None
         self._settling: dict[str, int] = {}
         self._holdoff_until = 0.0
+        self._last_start: dict[str, float] = {}
         # Shown in the page: what auto-start last did, or why it did nothing.
         self.last: dict | None = None
 
@@ -50,7 +75,7 @@ class Autostarter:
         self._settling.clear()
 
     def tick(self) -> None:
-        devices = {d.id: d for d in list_devices(self._settings)}
+        devices = {_identity(d): d for d in list_devices(self._settings)}
         arrived = set(devices) if self._known is None else set(devices) - self._known
         self._known = set(devices)
 
@@ -59,43 +84,79 @@ class Autostarter:
             self._settling.clear()
             return
 
-        for dev_id in arrived:
-            self._settling[dev_id] = 0
+        for identity in arrived:
+            self._settling[identity] = 0
         ready = []
-        for dev_id in list(self._settling):
-            if dev_id not in devices:
-                del self._settling[dev_id]
+        for identity in list(self._settling):
+            if identity not in devices:
+                del self._settling[identity]
                 continue
-            self._settling[dev_id] += 1
-            if self._settling[dev_id] >= _SETTLE_TICKS:
-                del self._settling[dev_id]
-                ready.append(devices[dev_id])
+            self._settling[identity] += 1
+            if self._settling[identity] >= _SETTLE_TICKS:
+                del self._settling[identity]
+                ready.append(devices[identity])
         if not ready:
             return
 
-        candidates = [d for d in ready if self._eligible(d, prefs)]
+        candidates, reasons = [], []
+        for device in ready:
+            reason = self._why_not(device, prefs)
+            if reason is None:
+                candidates.append(device)
+            elif reason:
+                reasons.append(reason)
         if not candidates:
+            if reasons:
+                self._record(False, reasons[0])
             return
-        if service.status(self._settings).get("state") in ("active", "activating"):
+
+        status = service.status(self._settings)
+        if status.get("state") in ("active", "activating"):
+            # The proxied device itself may re-enumerate; that needs no comment.
+            running = _proxied_key(status)
+            others = [d for d in candidates if profile_key(d.vendor_id, d.product_id) != running]
+            if others:
+                self._record(False, f"Did not start {label(others[0])}: the proxy is already running.")
             return
         if len(candidates) > 1:
             names = ", ".join(label(d) for d in candidates)
             self._record(False, f"Several devices appeared at once ({names}). Start one from the page.")
             return
-        self._start(candidates[0], prefs)
 
-    def _eligible(self, device: Device, prefs) -> bool:
+        device = candidates[0]
+        key = profile_key(device.vendor_id, device.product_id)
+        last = self._last_start.get(key)
+        if last is not None and time.monotonic() - last < _MIN_SECONDS_BETWEEN_STARTS:
+            self._record(
+                False,
+                f"{label(device)} was started automatically a moment ago and is back already. "
+                "Not starting it again so soon. Re-plug it, or start it from the page.",
+            )
+            return
+        self._last_start[key] = time.monotonic()
+        self._start(device, prefs)
+
+    def _why_not(self, device: Device, prefs: Preferences) -> str | None:
+        """None: start it. An empty string: leave it alone without comment,
+        because that is what the settings ask for. Otherwise the reason."""
         if device.system:
-            return False
-        # Never grab a network adapter unasked: it may be how the user
-        # reaches this page.
-        if any("Network interface" in w for w in device.warnings):
-            return False
-        if prefs.autostart.known_only:
-            return profile_key(device.vendor_id, device.product_id) in prefs.profiles
-        return True
+            return ""
+        started_before = profile_key(device.vendor_id, device.product_id) in prefs.profiles
+        if prefs.autostart.known_only and not started_before:
+            return ""
+        if device.network_interfaces and not started_before:
+            # It may be how the user reaches this page, and auto-starting it
+            # would lock them out on every boot. Starting it once by hand
+            # shows it is meant to be proxied.
+            names = ", ".join(device.network_interfaces)
+            return (
+                f"Did not start {label(device)} automatically: it provides the network interface {names}, "
+                "which may be how you reach this page. Start it once from the Proxy page and it will "
+                "start automatically from then on."
+            )
+        return None
 
-    def _start(self, device: Device, prefs) -> None:
+    def _start(self, device: Device, prefs: Preferences) -> None:
         udcs = [u.name for u in list_udcs(self._settings)]
         if prefs.udc in udcs:
             udc = prefs.udc

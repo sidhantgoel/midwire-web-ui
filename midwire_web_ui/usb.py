@@ -80,6 +80,9 @@ class Device:
     # True for the drive the system boots from. The UI disables it and the
     # start request refuses it.
     system: bool = False
+    # Network interfaces the Pi has brought up on this device, e.g. a USB
+    # Ethernet adapter. Proxying the device takes them away.
+    network_interfaces: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
 
@@ -157,13 +160,20 @@ def _system_block_paths(settings: Settings) -> list[Path]:
     return paths
 
 
+_IFF_UP = 0x1
+
+
 def _network_interfaces(settings: Settings) -> list[tuple[str, Path]]:
+    """Interfaces that are switched on, with the device they sit on. One
+    that is down carries no traffic, so losing it costs nothing. (The Midwire
+    image tells NetworkManager to leave USB network interfaces down.)"""
     result = []
     net = settings.sysfs / "class" / "net"
     if net.is_dir():
         for entry in sorted(net.iterdir()):
             device = entry / "device"
-            if device.exists():
+            flags = _read_int(entry / "flags", 16) or 0
+            if device.exists() and flags & _IFF_UP:
                 result.append((entry.name, device.resolve()))
     return result
 
@@ -228,10 +238,7 @@ def list_devices(settings: Settings) -> list[Device]:
             device.warnings.append("The system boots from this drive. It cannot be proxied.")
         for name, path in net_paths:
             if real in path.parents:
-                device.warnings.append(
-                    f"Network interface {name} runs on this device. Proxying it "
-                    "disconnects that interface, which may cut off this page."
-                )
+                device.network_interfaces.append(name)
         devices.append(device)
 
     # usb-proxy picks a device by vendor and product id only.

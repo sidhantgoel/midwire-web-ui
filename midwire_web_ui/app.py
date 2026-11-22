@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import __version__, service
+from . import __version__, netinfo, service
 from .auth import (
     DEFAULT_PASSWORD,
     MIN_PASSWORD_LENGTH,
@@ -126,9 +126,13 @@ def create_app(settings: Settings | None = None, *, watch_devices: bool = True) 
     # --- the proxy -----------------------------------------------------------
 
     @api.get("/state")
-    def state() -> dict:
+    def state(request: Request) -> dict:
         """Everything the main page shows, in one call. The page polls this."""
+        # The interface this very request came in on. A device that provides
+        # it cannot be proxied without cutting the page off.
+        server = request.scope.get("server")
         return {
+            "page_interface": netinfo.interface_for_address(server[0]) if server else None,
             "raw_gadget": settings.raw_gadget_dev.exists(),
             "udcs": [asdict(u) for u in list_udcs(settings)],
             "devices": [asdict(d) for d in list_devices(settings)],

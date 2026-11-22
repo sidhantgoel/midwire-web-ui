@@ -117,6 +117,8 @@ def build(root: Path) -> Path:
     net = root / "class" / "net" / "eth1"
     net.mkdir(parents=True)
     (net / "device").symlink_to(_device_dir(root, NETWORK_DEVICE) / f"{NETWORK_DEVICE}:1.0")
+    # 0x1003 = IFF_UP | IFF_BROADCAST | IFF_MULTICAST: switched on.
+    (net / "flags").write_text("0x1003")
 
     mounts = root.parent / "mounts"
     mounts.write_text(

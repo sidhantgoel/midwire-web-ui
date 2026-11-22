@@ -42,12 +42,36 @@ def test_endpoints_are_counted_over_all_alternate_settings(client):
     assert camera[2]["endpoints_in"] == 0
 
 
-def test_boot_drive_is_flagged_and_network_adapter_warns(client):
+def test_boot_drive_is_flagged_and_network_interfaces_are_listed(client):
     found = devices(client)
     assert found["2-1"]["system"] is True
     assert found["1-1.2"]["system"] is False
-    assert any("eth1" in w for w in found["1-1.4"]["warnings"])
+    assert found["1-1.4"]["network_interfaces"] == ["eth1"]
+    assert found["1-1.2"]["network_interfaces"] == []
     assert found["1-1.2"]["warnings"] == []
+
+
+def test_a_network_interface_that_is_down_does_not_count(client, env):
+    # What the Midwire image does to USB network interfaces: leaves them down.
+    (env.sysfs / "class" / "net" / "eth1" / "flags").write_text("0x1002")
+    assert devices(client)["1-1.4"]["network_interfaces"] == []
+
+
+def test_state_names_the_interface_the_page_arrived_on(client, monkeypatch):
+    from midwire_web_ui import netinfo
+
+    # The test client's "server" is not an address of any interface.
+    assert client.get("/api/state").json()["page_interface"] is None
+    monkeypatch.setattr(netinfo, "interface_for_address", lambda address: "eth1")
+    assert client.get("/api/state").json()["page_interface"] == "eth1"
+
+
+def test_interface_lookup_copes_with_anything():
+    from midwire_web_ui.netinfo import interface_for_address
+
+    assert interface_for_address("testserver") is None
+    assert interface_for_address("203.0.113.77") is None  # nobody's address
+    assert interface_for_address("127.0.0.1") == "lo"
 
 
 # --- starting and stopping --------------------------------------------------

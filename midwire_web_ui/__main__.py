@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import getpass
+import logging
 import os
 import sys
 
@@ -17,6 +18,10 @@ def serve(settings: Settings) -> int:
 
     from .app import create_app
     from .tls import CertificateError, ensure_certificate
+
+    # uvicorn sets up only its own loggers. Send ours (auto-start decisions,
+    # network changes) to the journal as well.
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s")
 
     app = create_app(settings)
     configs = [uvicorn.Config(app, host=settings.host, port=settings.port, log_level="info")]

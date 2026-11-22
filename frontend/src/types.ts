@@ -31,6 +31,8 @@ export interface Device {
   interfaces: UsbInterface[];
   // The drive the system boots from. It cannot be proxied.
   system: boolean;
+  // Network interfaces the Pi has brought up on this device.
+  network_interfaces: string[];
   warnings: string[];
 }
 
@@ -92,6 +94,8 @@ export interface Outcome {
 }
 
 export interface AppState {
+  // The Pi's network interface this browser's connection arrives on.
+  page_interface: string | null;
   raw_gadget: boolean;
   udcs: Udc[];
   devices: Device[];

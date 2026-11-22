@@ -1,3 +1,17 @@
+midwire-web-ui (0.1.1) unstable; urgency=medium
+
+  * Auto-start: a device that has a network interface is started once it
+    has been started from the page before. Previously it was always
+    skipped, without saying so.
+  * Auto-start: say on the Proxy page why an arriving device was not
+    started, and log the decision.
+  * Auto-start: notice a device that is pulled and pushed back in within
+    a second.
+  * Only warn that proxying a device cuts off the page when the page is
+    in fact reached through that device. Ignore interfaces that are down.
+
+ -- Sidhant Goel <sidhant@hexcod.in>  Sun, 22 Nov 2026 21:30:00 +0000
+
 midwire-web-ui (0.1.0) unstable; urgency=medium
 
   * Initial release: device list, start and stop with per-device options,

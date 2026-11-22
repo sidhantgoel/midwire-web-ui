@@ -72,8 +72,10 @@ export function SettingsPage({ onPasswordChanged }: { onPasswordChanged: () => P
           <span>
             Start the proxy when a USB device is plugged in
             <small>
-              Also at power-on, if exactly one device is already attached. The boot drive and USB network adapters
-              are never picked. Stopping the proxy by hand keeps it stopped until the device is re-plugged.
+              Also at power-on, if exactly one device is already attached. The boot drive is never picked. A device
+              the Pi uses as a network interface is picked only after you have started it from the Proxy page
+              once. Stopping the proxy by hand keeps it stopped until the device is re-plugged. When a device
+              is not started, the Proxy page says why.
             </small>
           </span>
         </label>

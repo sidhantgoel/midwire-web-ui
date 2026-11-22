@@ -170,6 +170,20 @@ export function ProxyPage() {
                   {d.warnings.map((w) => (
                     <span key={w} className={d.system ? "notice bad small" : "notice warn small"}>{w}</span>
                   ))}
+                  {d.network_interfaces.map((name) =>
+                    name === state.page_interface ? (
+                      // Only this case can lock the user out, so only this one warns.
+                      <span key={name} className="notice bad small">
+                        You are reaching this page through {name}, which runs on this device. Proxying it will
+                        disconnect you. Connect over Wi-Fi or the Pi's own Ethernet port first.
+                      </span>
+                    ) : (
+                      <span key={name} className="muted small">
+                        The Pi also uses this device as network interface {name}. That goes away while it is
+                        proxied; this page is not affected.
+                      </span>
+                    ),
+                  )}
                 </span>
               </label>
             </li>
