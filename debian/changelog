@@ -1,0 +1,7 @@
+midwire-web-ui (0.1.0) unstable; urgency=medium
+
+  * Initial release: device list, start and stop with per-device options,
+    live log, captures, saved settings with auto-start, Wi-Fi hotspot and
+    client settings, admin login.
+
+ -- Sidhant Goel <sidhant@hexcod.in>  Sun, 22 Nov 2026 18:00:00 +0000

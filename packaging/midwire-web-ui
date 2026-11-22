@@ -1,0 +1,3 @@
+#!/bin/sh
+# The Python package is installed privately, not into site-packages.
+PYTHONPATH=/usr/lib/midwire-web-ui exec python3 -m midwire_web_ui "$@"

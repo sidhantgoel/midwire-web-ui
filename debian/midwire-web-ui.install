@@ -1,0 +1,4 @@
+midwire_web_ui usr/lib/midwire-web-ui
+packaging/midwire-web-ui usr/bin
+packaging/webui.env etc/midwire-web-ui
+packaging/polkit/50-midwire-web-ui.rules usr/share/polkit-1/rules.d

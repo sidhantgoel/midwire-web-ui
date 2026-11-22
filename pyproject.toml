@@ -1,0 +1,15 @@
+[project]
+name = "midwire-web-ui"
+version = "0.1.0"
+description = "Web UI for Midwire: starts and stops usb-proxy, shows logs and captures, manages Wi-Fi"
+license = "MIT"
+requires-python = ">=3.11"
+# Versions follow Debian trixie, which is what Raspberry Pi OS ships.
+dependencies = ["fastapi>=0.115", "uvicorn>=0.32"]
+
+[project.optional-dependencies]
+test = ["pytest", "httpx"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

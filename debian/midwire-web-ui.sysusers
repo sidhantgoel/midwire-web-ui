@@ -1,0 +1,6 @@
+# The web UI's own user. usbproxy-ctl (from the usb-proxy package) lets it
+# write usb-proxy's arguments, control usb-proxy.service and read captures.
+# systemd-journal lets it show the proxy's log.
+u midwire-web-ui - "Midwire web UI" /var/lib/midwire-web-ui
+m midwire-web-ui usbproxy-ctl
+m midwire-web-ui systemd-journal

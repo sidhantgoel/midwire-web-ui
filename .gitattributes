@@ -1,0 +1,5 @@
+# Everything here runs on Linux. Keep LF even on a Windows checkout with
+# core.autocrlf=true, or debian/rules and the dev scripts break.
+* text=auto eol=lf
+*.png binary
+*.ico binary

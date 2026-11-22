@@ -1,0 +1,37 @@
+[Unit]
+Description=Midwire web UI
+Documentation=https://github.com/sidhantgoel/midwire-web-ui
+After=network.target
+
+[Service]
+Type=exec
+User=midwire-web-ui
+Group=midwire-web-ui
+EnvironmentFile=-/etc/midwire-web-ui/webui.env
+ExecStart=/usr/bin/midwire-web-ui serve
+# Admin password hash and saved settings.
+StateDirectory=midwire-web-ui
+StateDirectoryMode=0750
+Restart=on-failure
+RestartSec=2
+
+# Ports 80 and 443 without running as root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# Hardening. Starting usb-proxy and changing Wi-Fi go over D-Bus with polkit,
+# so the service itself needs no privileges.
+NoNewPrivileges=yes
+ProtectSystem=strict
+# Where it writes besides its state directory: usb-proxy's arguments file,
+# and captures it may delete. "-": do not fail if usb-proxy's folders are
+# not there yet.
+ReadWritePaths=-/run/usb-proxy -/var/lib/usb-proxy/captures
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+[Install]
+WantedBy=multi-user.target

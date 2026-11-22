@@ -1,0 +1,83 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Type-check and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: static
+          path: midwire_web_ui/static
+
+  deb:
+    needs: frontend
+    runs-on: ubuntu-latest
+    # Debian trixie matches Raspberry Pi OS: the tests run on the same
+    # FastAPI and pydantic versions the Pi will have.
+    container: debian:trixie
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: static
+          path: midwire_web_ui/static
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            python3 python3-fastapi python3-uvicorn python3-httpx python3-pytest \
+            build-essential devscripts equivs
+          mk-build-deps --install --remove \
+            --tool 'apt-get -y --no-install-recommends' debian/control
+
+      - name: Test
+        run: python3 -m pytest -q -p no:cacheprovider
+
+      - name: Check tag matches debian/changelog
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(dpkg-parsechangelog -S Version)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match debian/changelog version $version" >&2
+            exit 1
+          fi
+
+      - name: Build package
+        run: |
+          dpkg-buildpackage -b -us -uc
+          mkdir dist
+          mv ../midwire-web-ui_*.deb dist/
+          dpkg-deb --info dist/*.deb
+          dpkg-deb --contents dist/*.deb
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: midwire-web-ui-deb
+          path: dist/*.deb
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.deb

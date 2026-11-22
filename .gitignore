@@ -1,0 +1,13 @@
+# Built by `npm run build` in frontend/; packaged, not committed.
+midwire_web_ui/static/
+frontend/node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+debian/.debhelper/
+debian/midwire-web-ui/
+debian/*.substvars
+debian/*.debhelper*
+debian/files
+debian/debhelper-build-stamp

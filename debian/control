@@ -1,0 +1,33 @@
+Source: midwire-web-ui
+Section: web
+Priority: optional
+Maintainer: Sidhant Goel <sidhant@hexcod.in>
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-sequence-installsysusers,
+Standards-Version: 4.7.0
+Homepage: https://github.com/sidhantgoel/midwire-web-ui
+Rules-Requires-Root: no
+
+Package: midwire-web-ui
+Architecture: all
+Depends:
+ openssl,
+ polkitd,
+ python3 (>= 3.11),
+ python3-fastapi,
+ python3-uvicorn,
+ usb-proxy,
+ ${misc:Depends},
+Recommends:
+ network-manager,
+Description: Web UI for the Midwire USB proxy appliance
+ Lists the USB devices attached to the Pi, starts and stops usb-proxy with
+ the options picked in the page, shows its log live and serves the traffic
+ captures it writes. Settings such as starting the proxy automatically when
+ a device is plugged in are kept across reboots.
+ .
+ With NetworkManager installed it also manages Wi-Fi: renaming the hotspot,
+ changing its password, or joining an existing network instead.
+ .
+ A new install logs in with admin / admin. Change it after the first login.

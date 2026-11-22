@@ -1,0 +1,15 @@
+// The web UI changes Wi-Fi settings through NetworkManager (nmcli). Its
+// service user has no login session, so allow exactly the actions it needs.
+// Starting and stopping usb-proxy.service is covered by the usb-proxy
+// package's rule for the usbproxy-ctl group.
+polkit.addRule(function(action, subject) {
+	var allowed = [
+		"org.freedesktop.NetworkManager.network-control",
+		"org.freedesktop.NetworkManager.settings.modify.system",
+		"org.freedesktop.NetworkManager.wifi.scan",
+		"org.freedesktop.NetworkManager.wifi.share.protected",
+		"org.freedesktop.NetworkManager.enable-disable-wifi"
+	];
+	if (subject.user == "midwire-web-ui" && allowed.indexOf(action.id) >= 0)
+		return polkit.Result.YES;
+});

@@ -1,0 +1,127 @@
+// Shapes returned by the backend (midwire_web_ui/app.py).
+
+export interface Session {
+  authenticated: boolean;
+  // Still admin / admin. The page offers to change it.
+  default_password: boolean;
+  username: string;
+  version: string;
+}
+
+export interface UsbInterface {
+  number: number;
+  class_code: number;
+  class_name: string;
+  name: string | null;
+  driver: string | null;
+  endpoints_in: number;
+  endpoints_out: number;
+}
+
+export interface Device {
+  id: string;
+  bus: number | null;
+  address: number | null;
+  vendor_id: string;
+  product_id: string;
+  manufacturer: string | null;
+  product: string | null;
+  serial: string | null;
+  speed: string | null;
+  interfaces: UsbInterface[];
+  // The drive the system boots from. It cannot be proxied.
+  system: boolean;
+  warnings: string[];
+}
+
+export interface Udc {
+  name: string;
+  driver: string;
+  state: string | null;
+}
+
+export interface ProxyStatus {
+  state: string;
+  result?: string | null;
+  exit_status?: number | null;
+  pid?: number | null;
+  since?: number | null;
+  args?: string[];
+  capture?: string | null;
+  error?: string;
+}
+
+export interface ProxyOptions {
+  hide_interfaces: number[];
+  auto_remap_endpoints: boolean;
+  iso_batch_size: number | null;
+  injection_file: string | null;
+  customized_config: boolean;
+  capture: boolean;
+  verbose: number;
+}
+
+export const DEFAULT_OPTIONS: ProxyOptions = {
+  hide_interfaces: [],
+  auto_remap_endpoints: false,
+  iso_batch_size: null,
+  injection_file: null,
+  customized_config: false,
+  capture: false,
+  verbose: 0,
+};
+
+export interface Preferences {
+  autostart: { enabled: boolean; known_only: boolean };
+  udc: string | null;
+  defaults: ProxyOptions;
+  // Last options used per device, keyed "vendor:product".
+  profiles: Record<string, ProxyOptions>;
+}
+
+export interface Capture {
+  name: string;
+  size: number;
+  modified: number;
+}
+
+export interface Outcome {
+  time: number;
+  ok: boolean;
+  message: string;
+}
+
+export interface AppState {
+  raw_gadget: boolean;
+  udcs: Udc[];
+  devices: Device[];
+  injection_files: string[];
+  status: ProxyStatus;
+  captures: Capture[];
+  preferences: Preferences;
+  autostart: Outcome | null;
+}
+
+export interface NetworkStatus {
+  available: boolean;
+  error?: string;
+  busy: boolean;
+  last: Outcome | null;
+  wifi?: {
+    interface: string;
+    present: boolean;
+    mode: "hotspot" | "client" | "off";
+    state: string | null;
+    ssid: string | null;
+    addresses: string[];
+  };
+  hotspot?: { ssid: string | null };
+  client?: { ssid: string } | null;
+  ethernet?: { interface: string; state: string; connection: string | null; addresses: string[] }[];
+}
+
+export interface WifiNetwork {
+  ssid: string;
+  signal: number;
+  secured: boolean;
+}
