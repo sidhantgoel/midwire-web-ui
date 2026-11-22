@@ -33,6 +33,7 @@ def main() -> None:
             (root / name).mkdir()
         os.environ["FAKE_STATE_DIR"] = str(root / "state")
         os.environ["FAKE_JOURNAL_FOLLOW"] = "1"
+        os.environ["FAKE_UPDATE_STATUS"] = str(root / "lib" / "update.json")
         mounts = fake_sysfs.build(root / "sys")
         (root / "etc" / "config.json").write_text("{}")
         (root / "etc" / "injection.json").write_text("{}")
@@ -59,6 +60,7 @@ def main() -> None:
             systemctl=fake("systemctl"),
             journalctl=fake("journalctl"),
             nmcli=fake("nmcli"),
+            update_status_file=root / "lib" / "update.json",
         )
         uvicorn.run(create_app(settings), host=settings.host, port=settings.port, log_level="info")
 

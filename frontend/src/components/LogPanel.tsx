@@ -3,7 +3,14 @@ import { useEffect, useRef, useState } from "react";
 // usb-proxy can print thousands of lines a second. Keep a bounded tail.
 const MAX_LINES = 2000;
 
-export function LogPanel() {
+interface Props {
+  title?: string;
+  // A server-sent-events endpoint that sends JSON arrays of lines.
+  url?: string;
+  empty?: string;
+}
+
+export function LogPanel({ title = "Log", url = "/api/logs", empty = "No log lines yet." }: Props) {
   const [lines, setLines] = useState<string[]>([]);
   const [follow, setFollow] = useState(true);
   const [connected, setConnected] = useState(false);
@@ -11,7 +18,7 @@ export function LogPanel() {
 
   useEffect(() => {
     // EventSource reconnects by itself, and sends the session cookie.
-    const source = new EventSource("/api/logs");
+    const source = new EventSource(url);
     source.onopen = () => {
       setConnected(true);
       // Each connection replays the recent journal, so start clean.
@@ -23,7 +30,7 @@ export function LogPanel() {
       setLines((old) => [...old, ...batch].slice(-MAX_LINES));
     };
     return () => source.close();
-  }, []);
+  }, [url]);
 
   useEffect(() => {
     if (follow && box.current) box.current.scrollTop = box.current.scrollHeight;
@@ -32,7 +39,7 @@ export function LogPanel() {
   return (
     <section className="card">
       <div className="card-head">
-        <h2>Log</h2>
+        <h2>{title}</h2>
         <span className={connected ? "dot ok" : "dot"} title={connected ? "Live" : "Reconnecting"} />
         <span className="spacer" />
         <label className="check inline">
@@ -42,7 +49,7 @@ export function LogPanel() {
         <button className="quiet" onClick={() => setLines([])}>Clear</button>
       </div>
       <pre className="log" ref={box}>
-        {lines.length ? lines.join("\n") : "No log lines yet."}
+        {lines.length ? lines.join("\n") : empty}
       </pre>
     </section>
   );

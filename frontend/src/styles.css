@@ -295,6 +295,11 @@ summary {
 .dot.ok {
   background: #2da44e;
 }
+.tab-dot {
+  display: inline-block;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
 
 .notice {
   display: block;

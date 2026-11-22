@@ -35,6 +35,8 @@ class Env:
         self.state_dir = tmp_path / "state"
         self.state_dir.mkdir()
         monkeypatch.setenv("FAKE_STATE_DIR", str(self.state_dir))
+        # Where the fake systemctl, playing the updater, writes its status.
+        monkeypatch.setenv("FAKE_UPDATE_STATUS", str(tmp_path / "lib" / "update.json"))
         # Network changes wait a second for the HTTP response to leave.
         monkeypatch.setattr(network, "_SWITCH_DELAY", 0)
 
@@ -62,6 +64,7 @@ class Env:
             systemctl=fake("systemctl"),
             journalctl=fake("journalctl"),
             nmcli=fake("nmcli"),
+            update_status_file=tmp_path / "lib" / "update.json",
         )
 
     def app(self, **overrides):

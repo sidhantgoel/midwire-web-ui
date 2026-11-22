@@ -124,6 +124,31 @@ export interface NetworkStatus {
   ethernet?: { interface: string; state: string; connection: string | null; addresses: string[] }[];
 }
 
+export interface UpdatePackage {
+  name: string;
+  installed: string | null;
+  available: string | null;
+  upgradable: boolean;
+}
+
+// From the midwire-base package's updater, by way of /api/updates.
+export interface UpdateStatus {
+  // False on a device that does not have the updater; `reason` says why.
+  supported: boolean;
+  reason?: string;
+  state?: "idle" | "checking" | "installing";
+  checked?: number | null;
+  check_error?: string | null;
+  packages?: UpdatePackage[];
+  update_available?: boolean;
+  last_install?: {
+    time: number | null;
+    ok: boolean;
+    message: string;
+    upgraded: { name: string; from: string | null; to: string | null }[];
+  } | null;
+}
+
 export interface WifiNetwork {
   ssid: string;
   signal: number;

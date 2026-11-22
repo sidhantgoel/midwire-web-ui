@@ -1,5 +1,8 @@
-midwire-web-ui (0.1.1) unstable; urgency=medium
+midwire-web-ui (0.2.0) unstable; urgency=medium
 
+  * Updates tab: shows installed and available versions of Midwire's
+    packages, checks for updates and installs them, with live progress.
+    The work is done by the updater in the midwire-base package.
   * Auto-start: a device that has a network interface is started once it
     has been started from the page before. Previously it was always
     skipped, without saying so.

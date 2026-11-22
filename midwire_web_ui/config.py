@@ -44,6 +44,11 @@ class Settings:
     tls_port: int = 0
     tls_cert: Path | None = None
     tls_key: Path | None = None
+    # Contract with the midwire-base package: the status file its updater
+    # writes, and the two services that run it.
+    update_status_file: Path = Path("/var/lib/midwire/update.json")
+    update_check_unit: str = "midwire-update-check.service"
+    update_install_unit: str = "midwire-update-install.service"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -67,4 +72,7 @@ class Settings:
             tls_port=int(_env("TLS_PORT", "0")),
             tls_cert=Path(_env("TLS_CERT", str(state / "tls" / "cert.pem"))),
             tls_key=Path(_env("TLS_KEY", str(state / "tls" / "key.pem"))),
+            update_status_file=Path(_env("UPDATE_STATUS_FILE", "/var/lib/midwire/update.json")),
+            update_check_unit=_env("UPDATE_CHECK_UNIT", "midwire-update-check.service"),
+            update_install_unit=_env("UPDATE_INSTALL_UNIT", "midwire-update-install.service"),
         )

@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import __version__, netinfo, service
+from . import __version__, netinfo, service, updates
 from .auth import (
     DEFAULT_PASSWORD,
     MIN_PASSWORD_LENGTH,
@@ -143,6 +143,37 @@ def create_app(settings: Settings | None = None, *, watch_devices: bool = True) 
             "autostart": autostarter.last,
         }
 
+    # --- software updates ----------------------------------------------------
+
+    @api.get("/updates")
+    def update_status() -> dict:
+        return updates.status(settings)
+
+    @api.post("/updates/check", status_code=202)
+    def update_check() -> dict:
+        try:
+            updates.check(settings)
+        except service.RequestError as exc:
+            raise bad_request(exc) from exc
+        return {"started": True}
+
+    @api.post("/updates/install", status_code=202)
+    def update_install() -> dict:
+        try:
+            updates.install(settings)
+        except service.RequestError as exc:
+            raise bad_request(exc) from exc
+        return {"started": True}
+
+    @api.get("/updates/log")
+    async def update_log() -> StreamingResponse:
+        """Server-sent events: what the updater prints, live."""
+        return StreamingResponse(
+            _follow_journal(settings, [settings.update_check_unit, settings.update_install_unit]),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
     @api.post("/start")
     def start(request: StartRequest) -> dict:
         try:
@@ -247,7 +278,7 @@ def create_app(settings: Settings | None = None, *, watch_devices: bool = True) 
     async def logs() -> StreamingResponse:
         """Server-sent events. Each event is a JSON array of journal lines."""
         return StreamingResponse(
-            _follow_journal(settings),
+            _follow_journal(settings, [settings.unit]),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
@@ -258,11 +289,12 @@ def create_app(settings: Settings | None = None, *, watch_devices: bool = True) 
     return app
 
 
-async def _follow_journal(settings: Settings):
+async def _follow_journal(settings: Settings, units: list[str]):
+    unit_args = [arg for unit in units for arg in ("-u", unit)]
     try:
         proc = await asyncio.create_subprocess_exec(
             *settings.journalctl,
-            "-u", settings.unit, "-f", "-n", _LOG_BACKLOG_LINES, "-o", "short-iso", "--no-pager",
+            *unit_args, "-f", "-n", _LOG_BACKLOG_LINES, "-o", "short-iso", "--no-pager",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
         )

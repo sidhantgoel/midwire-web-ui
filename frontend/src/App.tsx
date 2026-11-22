@@ -5,24 +5,29 @@ import { FirstLogin, Login } from "./pages/Access";
 import { NetworkPage } from "./pages/NetworkPage";
 import { ProxyPage } from "./pages/ProxyPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import type { Session } from "./types";
+import { UpdatesPage } from "./pages/UpdatesPage";
+import type { Session, UpdateStatus } from "./types";
 
-type Tab = "proxy" | "settings" | "network";
+type Tab = "proxy" | "settings" | "network" | "updates";
 const TABS: { id: Tab; label: string }[] = [
   { id: "proxy", label: "Proxy" },
   { id: "settings", label: "Settings" },
   { id: "network", label: "Network" },
+  { id: "updates", label: "Updates" },
 ];
 
 // Remembered per browser tab, so "keep the default for now" is asked once
 // per login rather than on every page load.
 const SKIP_KEY = "midwire-skip-password-change";
+// How often to look for a finished daily check, for the dot on the tab.
+const UPDATE_POLL_MS = 60_000;
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("proxy");
   const [skipped, setSkipped] = useState(() => sessionStorage.getItem(SKIP_KEY) === "1");
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -38,6 +43,19 @@ export function App() {
     setLoggedOutHandler(() => void refresh());
     void refresh();
   }, [refresh]);
+
+  const noteUpdates = useCallback((status: UpdateStatus) => {
+    setUpdateAvailable(status.supported && status.update_available === true);
+  }, []);
+
+  const authenticated = session?.authenticated === true;
+  useEffect(() => {
+    if (!authenticated) return;
+    const look = () => api.get<UpdateStatus>("/updates").then(noteUpdates).catch(() => undefined);
+    void look();
+    const timer = setInterval(() => void look(), UPDATE_POLL_MS);
+    return () => clearInterval(timer);
+  }, [authenticated, noteUpdates]);
 
   if (!session) {
     return (
@@ -75,6 +93,7 @@ export function App() {
           {TABS.map((t) => (
             <button key={t.id} className={tab === t.id ? "tab active" : "tab"} onClick={() => setTab(t.id)}>
               {t.label}
+              {t.id === "updates" && updateAvailable && <span className="dot ok tab-dot" title="Update available" />}
             </button>
           ))}
         </nav>
@@ -93,6 +112,7 @@ export function App() {
         {tab === "proxy" && <ProxyPage />}
         {tab === "settings" && <SettingsPage onPasswordChanged={refresh} />}
         {tab === "network" && <NetworkPage />}
+        {tab === "updates" && <UpdatesPage onChange={noteUpdates} />}
       </main>
     </>
   );

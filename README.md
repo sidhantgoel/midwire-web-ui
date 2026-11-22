@@ -6,6 +6,7 @@ What it does:
 
 - **Proxy.** Lists the USB devices on the Pi's host ports, lets you hide interfaces and pick options, then starts and stops `usb-proxy.service`. Shows the proxy's log live and serves the `.pcap` captures it writes.
 - **Settings.** Saved across reboots: start the proxy automatically when a device is plugged in, default options, and the options last used for each device. When auto-start leaves an arriving device alone, the Proxy page says why.
+- **Updates.** Shows the installed and available versions of Midwire's packages and installs updates. The updating itself is done by the `midwire-base` package (see the midwire repository): this page only starts its two services and shows its status file and log.
 - **Network.** Rename the Wi-Fi hotspot or change its password, or join an existing Wi-Fi network instead. If joining fails, the hotspot comes back.
 
 A new install logs in with `admin` / `admin`. The page offers to change the password after the first login and shows a reminder until it is changed. An empty password is allowed. If the password is lost, run `sudo midwire-web-ui set-password` on the device.
