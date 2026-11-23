@@ -1,9 +1,12 @@
 """Wi-Fi settings, through NetworkManager's nmcli.
 
 The image ships a hotspot profile, `midwire-hotspot`. Joining an existing
-network creates `midwire-wifi` with a higher autoconnect priority, so at boot
-NetworkManager tries that network first and falls back to the hotspot when it
-is out of range. Going back to hotspot mode deletes `midwire-wifi`.
+network creates `midwire-wifi`. Going back to hotspot mode deletes it.
+
+Which of the two is up after a restart is not decided here, and not by
+NetworkManager's priorities either (a hotspot is always ready, so it would
+always win): midwire-base's wifi-fallback service joins the saved network
+and starts the hotspot only when that network cannot be joined.
 
 Changing Wi-Fi usually cuts the connection the request came in on, so changes
 run in the background after the response has gone out, and the outcome is
