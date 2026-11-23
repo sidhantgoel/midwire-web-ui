@@ -186,6 +186,24 @@ def list_captures(settings: Settings) -> list[dict]:
     return sorted(captures, key=lambda c: c["modified"], reverse=True)
 
 
+def delete_captures(settings: Settings, keep: str | None) -> tuple[int, list[str]]:
+    """Deletes every capture except `keep`, the one being written. Returns
+    how many went and the names that could not be deleted."""
+    deleted, failed = 0, []
+    for capture in list_captures(settings):
+        if capture["name"] == keep:
+            continue
+        try:
+            # list_captures only yields plain names matching the capture
+            # pattern, so this cannot leave the folder. A symlink is removed
+            # itself, never what it points to.
+            (settings.captures_dir / capture["name"]).unlink()
+            deleted += 1
+        except OSError:
+            failed.append(capture["name"])
+    return deleted, failed
+
+
 def capture_path(name: str, settings: Settings) -> Path:
     """Resolves a capture by name. The pattern has no path separators, so the
     result cannot leave the captures directory."""

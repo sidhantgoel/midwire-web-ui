@@ -96,6 +96,9 @@ export interface Outcome {
 export interface AppState {
   // The Pi's network interface this browser's connection arrives on.
   page_interface: string | null;
+  // The Pi's interface on the network link over the USB-C cable, while that
+  // link is up.
+  usb_link_interface: string | null;
   raw_gadget: boolean;
   udcs: Udc[];
   devices: Device[];

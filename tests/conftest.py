@@ -50,6 +50,7 @@ class Env:
         (tmp_path / "raw-gadget").touch()
         # The image's default hotspot password. The fake nmcli's hotspot
         # starts with "initial-pass", so by default it is NOT the default.
+        self.usb_link_state = tmp_path / "run" / "net-gadget.env"
         self.firstboot_conf = tmp_path / "etc" / "firstboot.conf"
         self.firstboot_conf.write_text("HOTSPOT_PRIORITY=-10" + chr(10) + "HOTSPOT_DEFAULT_PASSWORD=midwire-setup" + chr(10))
         # Stands in for midwire-base's root helper. A short path: unix
@@ -75,6 +76,7 @@ class Env:
             update_status_file=tmp_path / "lib" / "update.json",
             system_socket=tmp_path / "sys.sock",
             firstboot_conf=self.firstboot_conf,
+            usb_link_state_file=self.usb_link_state,
         )
 
     def app(self, **overrides):

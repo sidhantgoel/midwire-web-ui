@@ -8,8 +8,6 @@ import { DEFAULT_OPTIONS, type AppState, type Device, type ProxyOptions } from "
 
 const POLL_MS = 2000;
 const RUNNING = ["active", "activating", "deactivating"];
-// The Pi's side of the network link over the USB-C port (midwire-base).
-const USB_LINK = "midwire0";
 
 export function ProxyPage() {
   const [state, setState] = useState<AppState | null>(null);
@@ -19,6 +17,8 @@ export function ProxyPage() {
   const [options, setOptions] = useState<ProxyOptions>(DEFAULT_OPTIONS);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  // "Delete all" asks once more before it deletes.
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -79,6 +79,10 @@ export function ProxyPage() {
   const stop = () => act(() => api.post("/stop"));
   const removeCapture = (name: string) =>
     act(() => api.delete(`/captures/${encodeURIComponent(name)}`));
+  const removeAllCaptures = async () => {
+    setConfirmDeleteAll(false);
+    await act(() => api.delete("/captures"));
+  };
 
   const toggleHidden = (number: number) => {
     const hidden = options.hide_interfaces.includes(number)
@@ -88,6 +92,8 @@ export function ProxyPage() {
   };
 
   const proxied = running ? findProxied(state) : null;
+  // Everything except the capture the proxy is writing right now.
+  const deletable = state.captures.filter((c) => c.name !== state.status.capture).length;
   const allHidden = device ? device.interfaces.length > 0 && options.hide_interfaces.length >= device.interfaces.length : false;
 
   return (
@@ -237,7 +243,7 @@ export function ProxyPage() {
 
           <OptionFields options={options} onChange={setOptions} injectionFiles={state.injection_files} />
 
-          {state.page_interface === USB_LINK && (
+          {state.page_interface !== null && state.page_interface === state.usb_link_interface && (
             <p className="notice warn">
               You are connected through the USB-C cable. Starting the proxy takes that port, so this page
               disconnects until the proxy stops. To watch the proxy while it runs, connect over Wi-Fi or
@@ -256,7 +262,27 @@ export function ProxyPage() {
       <section className="card">
         <div className="card-head">
           <h2>Captures</h2>
+          <span className="spacer" />
+          {deletable > 0 && !confirmDeleteAll && (
+            <button className="quiet" disabled={busy} onClick={() => setConfirmDeleteAll(true)}>
+              Delete all
+            </button>
+          )}
+          {confirmDeleteAll && (
+            <>
+              <span className="small">
+                Delete {deletable} {deletable === 1 ? "capture" : "captures"}? This cannot be undone.
+              </span>
+              <button className="danger" disabled={busy} onClick={() => void removeAllCaptures()}>
+                Delete
+              </button>
+              <button className="quiet" onClick={() => setConfirmDeleteAll(false)}>Cancel</button>
+            </>
+          )}
         </div>
+        {confirmDeleteAll && state.status.capture && (
+          <p className="muted small">The capture being written now, {state.status.capture}, is kept.</p>
+        )}
         {state.captures.length === 0 ? (
           <p className="muted">No captures yet. Tick "Capture traffic to a file" before starting.</p>
         ) : (

@@ -1,3 +1,3 @@
 """Midwire web UI: starts and stops usb-proxy.service with user-selected options."""
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"

@@ -133,6 +133,8 @@ def create_app(settings: Settings | None = None, *, watch_devices: bool = True) 
         server = request.scope.get("server")
         return {
             "page_interface": netinfo.interface_for_address(server[0]) if server else None,
+            # The Pi's interface on the USB-C network link, when that is up.
+            "usb_link_interface": netinfo.usb_link_interface(settings.usb_link_state_file),
             "raw_gadget": settings.raw_gadget_dev.exists(),
             "udcs": [asdict(u) for u in list_udcs(settings)],
             "devices": [asdict(d) for d in list_devices(settings)],
@@ -290,6 +292,18 @@ def create_app(settings: Settings | None = None, *, watch_devices: bool = True) 
         except service.RequestError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return FileResponse(path, media_type="application/vnd.tcpdump.pcap", filename=name)
+
+    @api.delete("/captures")
+    def delete_all_captures() -> dict:
+        """Deletes every capture except the one being written."""
+        in_use = service.status(settings).get("capture")
+        deleted, failed = service.delete_captures(settings, keep=in_use)
+        if failed:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Deleted {deleted}, but could not delete {len(failed)}: {', '.join(failed[:3])}.",
+            )
+        return {"deleted": deleted, "kept": in_use, "captures": service.list_captures(settings)}
 
     @api.delete("/captures/{name}")
     def delete_capture(name: str) -> dict:

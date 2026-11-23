@@ -229,6 +229,50 @@ def test_capture_in_use_cannot_be_deleted(client, env):
     assert client.delete(f"/api/captures/{name}", headers=WRITE).status_code == 200
 
 
+def test_delete_all_captures(client, env):
+    for name in ("20261122-140000_046d_c52b.pcap", "20261123-090000_2ca3_0020.pcap"):
+        (env.settings.captures_dir / name).write_bytes(b"x")
+    (env.settings.captures_dir / "notes.txt").write_text("not a capture")
+    assert client.delete("/api/captures").status_code == 403  # no CSRF header
+
+    response = client.delete("/api/captures", headers=WRITE)
+    assert response.status_code == 200
+    assert response.json() == {"deleted": 2, "kept": None, "captures": []}
+    # Only captures go. Anything else in the folder is left alone.
+    assert [p.name for p in env.settings.captures_dir.iterdir()] == ["notes.txt"]
+    assert client.delete("/api/captures", headers=WRITE).json()["deleted"] == 0
+
+
+def test_delete_all_keeps_the_capture_being_written(client, env):
+    started = client.post("/api/start", json={**RECEIVER, "capture": True}, headers=WRITE)
+    current = started.json()["status"]["capture"]
+    (env.settings.captures_dir / current).write_bytes(b"live")
+    (env.settings.captures_dir / "20261122-140000_046d_c52b.pcap").write_bytes(b"old")
+
+    response = client.delete("/api/captures", headers=WRITE)
+    assert response.json()["deleted"] == 1 and response.json()["kept"] == current
+    assert [c["name"] for c in response.json()["captures"]] == [current]
+    assert (env.settings.captures_dir / current).read_bytes() == b"live"
+
+
+def test_delete_all_removes_a_symlink_not_its_target(client, env):
+    outside = env.settings.captures_dir.parent / "precious.pcap"
+    outside.write_text("precious")
+    (env.settings.captures_dir / "link.pcap").symlink_to(outside)
+    assert client.delete("/api/captures", headers=WRITE).json()["deleted"] == 1
+    assert outside.read_text() == "precious"
+    assert not (env.settings.captures_dir / "link.pcap").exists()
+
+
+def test_state_names_the_usb_link_interface_while_the_link_is_up(client, env):
+    assert client.get("/api/state").json()["usb_link_interface"] is None
+    env.usb_link_state.write_text("INTERFACE=usb0" + chr(10))
+    assert client.get("/api/state").json()["usb_link_interface"] == "usb0"
+    for junk in ("INTERFACE=../../etc/passwd", "INTERFACE=", "garbage", "INTERFACE=name with spaces"):
+        env.usb_link_state.write_text(junk + chr(10))
+        assert client.get("/api/state").json()["usb_link_interface"] is None, junk
+
+
 # --- logs -------------------------------------------------------------------
 
 

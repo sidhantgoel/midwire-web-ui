@@ -54,6 +54,9 @@ class Settings:
     # The image's first-boot settings. Read for the hotspot's default
     # password, to tell whether the user has changed it.
     firstboot_conf: Path = Path("/etc/midwire/firstboot.conf")
+    # Written by midwire-base while the USB-C port is a network adapter:
+    # names the Pi's network interface on that link.
+    usb_link_state_file: Path = Path("/run/midwire/net-gadget.env")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -82,4 +85,5 @@ class Settings:
             update_install_unit=_env("UPDATE_INSTALL_UNIT", "midwire-update-install.service"),
             system_socket=Path(_env("SYSTEM_SOCKET", "/run/midwire/system.sock")),
             firstboot_conf=Path(_env("FIRSTBOOT_CONF", "/etc/midwire/firstboot.conf")),
+            usb_link_state_file=Path(_env("USB_LINK_STATE_FILE", "/run/midwire/net-gadget.env")),
         )

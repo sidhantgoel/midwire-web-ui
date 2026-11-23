@@ -1,3 +1,13 @@
+midwire-web-ui (0.4.1) unstable; urgency=medium
+
+  * Captures: a "Delete all" button. It asks once more first, and keeps the
+    capture that is being written.
+  * The warning about being connected through the USB-C cable no longer
+    assumes the link's interface is called midwire0. It reads the name from
+    midwire-base, which is fixed in 0.4.1 to bring the link up properly.
+
+ -- Sidhant Goel <sidhant@hexcod.in>  Mon, 23 Nov 2026 12:00:00 +0000
+
 midwire-web-ui (0.4.0) unstable; urgency=medium
 
   * Network tab: switch for the network link over the USB-C cable that

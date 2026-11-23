@@ -6,8 +6,10 @@ network interface would cut off the page they are looking at.
 
 from __future__ import annotations
 
+import re
 import socket
 import struct
+from pathlib import Path
 
 _SIOCGIFADDR = 0x8915
 
@@ -40,4 +42,22 @@ def interface_for_address(address: str) -> str | None:
                 return name
         except (ImportError, OSError):
             return None
+    return None
+
+
+_INTERFACE_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,15}$")
+
+
+def usb_link_interface(state_file: Path) -> str | None:
+    """The Pi's interface on the network link over the USB-C cable, while
+    that link is up. Usually midwire0. None when the link is down, which
+    includes all the time the proxy is running."""
+    try:
+        lines = state_file.read_text().splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        name, _, value = line.partition("=")
+        if name.strip() == "INTERFACE" and _INTERFACE_NAME.match(value.strip()):
+            return value.strip()
     return None
