@@ -8,6 +8,8 @@ import { DEFAULT_OPTIONS, type AppState, type Device, type ProxyOptions } from "
 
 const POLL_MS = 2000;
 const RUNNING = ["active", "activating", "deactivating"];
+// The Pi's side of the network link over the USB-C port (midwire-base).
+const USB_LINK = "midwire0";
 
 export function ProxyPage() {
   const [state, setState] = useState<AppState | null>(null);
@@ -235,6 +237,13 @@ export function ProxyPage() {
 
           <OptionFields options={options} onChange={setOptions} injectionFiles={state.injection_files} />
 
+          {state.page_interface === USB_LINK && (
+            <p className="notice warn">
+              You are connected through the USB-C cable. Starting the proxy takes that port, so this page
+              disconnects until the proxy stops. To watch the proxy while it runs, connect over Wi-Fi or
+              Ethernet first.
+            </p>
+          )}
           <button className="primary" disabled={busy || !chosenUdc || !state.raw_gadget || allHidden}
             onClick={() => void start()}>
             Start proxy

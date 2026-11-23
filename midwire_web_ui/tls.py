@@ -22,8 +22,9 @@ log = logging.getLogger(__name__)
 # Browsers refuse server certificates valid for longer than this.
 _VALID_DAYS = 825
 _RENEW_WHEN_SECONDS_LEFT = 30 * 24 * 3600
-# The image's fixed addresses: hotspot, and Ethernet straight to a computer.
-_FIXED_ADDRESSES = ("10.42.0.1", "10.42.1.1", "127.0.0.1")
+# The image's fixed addresses: hotspot, Ethernet straight to a computer, and
+# the network link over the USB-C cable.
+_FIXED_ADDRESSES = ("10.42.0.1", "10.42.1.1", "10.42.2.1", "127.0.0.1")
 
 
 class CertificateError(Exception):

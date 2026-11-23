@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { api, message } from "../api";
 import { dateTime } from "../format";
-import type { NetworkStatus, WifiNetwork } from "../types";
+import type { NetworkStatus, SystemStatus, WifiNetwork } from "../types";
 
 const POLL_MS = 5000;
 
@@ -90,6 +90,8 @@ export function NetworkPage({ onChanged }: { onChanged: () => void }) {
         </p>
       </section>
 
+      <UsbLinkCard />
+
       {wifi.present && (
         <>
           <HotspotCard ssid={status.hotspot?.ssid ?? ""} active={wifi.mode === "hotspot"} busy={status.busy}
@@ -98,6 +100,62 @@ export function NetworkPage({ onChanged }: { onChanged: () => void }) {
         </>
       )}
     </>
+  );
+}
+
+// The USB-C port as a network adapter while the proxy is idle.
+function UsbLinkCard() {
+  const [system, setSystem] = useState<SystemStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const load = () => api.get<SystemStatus>("/system").then(setSystem).catch(() => undefined);
+    void load();
+    const timer = setInterval(() => {
+      if (!document.hidden) void load();
+    }, POLL_MS);
+    return () => clearInterval(timer);
+  }, []);
+
+  const link = system?.supported ? system.net_gadget : null;
+  // Nothing to show on a device that does not have the feature.
+  if (!link || !link.installed) return null;
+
+  const toggle = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setSystem(await api.put<SystemStatus>("/system/net-gadget", { enabled: !link.enabled }));
+    } catch (err) {
+      setError(message(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card">
+      <div className="card-head">
+        <h2>Network over the USB-C cable</h2>
+        <span className={link.enabled ? "badge on" : "badge"}>
+          {!link.enabled ? "Off" : link.active ? "On" : "Paused: the proxy has the port"}
+        </span>
+        <span className="spacer" />
+        <button disabled={busy} onClick={() => void toggle()}>{link.enabled ? "Turn off" : "Turn on"}</button>
+      </div>
+      <p className="muted small">
+        While the proxy is stopped, the Pi's USB-C port acts as a network adapter. The computer on the other end of
+        the cable can then open this page at <code>http://midwire.local</code> or <code>http://10.42.2.1</code>,
+        with no Wi-Fi or Ethernet. Starting the proxy takes the port, so the link drops for as long as the proxy
+        runs and comes back when it stops.
+      </p>
+      <p className="muted small">
+        It only reaches the Pi: the computer keeps its own internet connection and nothing is routed through the
+        Pi. Turn it off if the computer you are testing should not see a network adapter.
+      </p>
+      {error && <p className="notice bad">{error}</p>}
+    </section>
   );
 }
 

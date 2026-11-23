@@ -180,6 +180,15 @@ def create_app(settings: Settings | None = None, *, watch_devices: bool = True) 
             raise bad_request(exc) from exc
         return system_view()
 
+    @api.put("/system/net-gadget")
+    def system_net_gadget(request: system.NetGadgetRequest) -> dict:
+        """The network link over the USB-C port while the proxy is idle."""
+        try:
+            system.set_net_gadget(settings, request)
+        except service.RequestError as exc:
+            raise bad_request(exc) from exc
+        return system_view()
+
     @api.post("/system/password")
     def system_password(request: system.SystemPasswordRequest) -> dict:
         need_real_admin_password()

@@ -30,6 +30,11 @@ class SshRequest(BaseModel):
     enabled: bool
 
 
+class NetGadgetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: bool
+
+
 class SystemPasswordRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     user: UserName
@@ -95,11 +100,21 @@ def status(settings: Settings) -> dict:
         return {"supported": False, "reason": str(exc)}
     except RequestError as exc:
         return {"supported": False, "reason": str(exc)}
-    return {"supported": True, "ssh": answer.get("ssh") or {}, "users": answer.get("users") or []}
+    return {
+        "supported": True,
+        "ssh": answer.get("ssh") or {},
+        # None from a helper that is older than the USB-C network link.
+        "net_gadget": answer.get("net_gadget"),
+        "users": answer.get("users") or [],
+    }
 
 
 def set_ssh(settings: Settings, request: SshRequest) -> dict:
     return _call(settings, {"action": "ssh", "enabled": request.enabled})
+
+
+def set_net_gadget(settings: Settings, request: NetGadgetRequest) -> dict:
+    return _call(settings, {"action": "net-gadget", "enabled": request.enabled})
 
 
 def set_password(settings: Settings, request: SystemPasswordRequest) -> dict:

@@ -30,6 +30,7 @@ def test_status_shows_ssh_and_login_users(client):
     assert current["supported"] is True
     assert current["ssh"] == {"installed": True, "enabled": False, "running": False}
     assert current["users"] == [{"name": "pi", "has_password": False, "sudo": True, "keys": []}]
+    assert current["net_gadget"]["installed"] is True
     # Still on admin / admin.
     assert current["locked"] is True
 
@@ -42,6 +43,29 @@ def test_ssh_can_be_switched_even_with_the_default_admin_password(client, env):
 
     off = client.put("/api/system/ssh", json={"enabled": False}, headers=WRITE)
     assert off.json()["ssh"]["enabled"] is False
+
+
+# --- the network link over the USB-C port ------------------------------------
+
+
+def test_usb_c_network_link_can_be_switched(client, env):
+    assert client.get("/api/system").json()["net_gadget"] == {"installed": True, "enabled": True, "active": True}
+
+    off = client.put("/api/system/net-gadget", json={"enabled": False}, headers=WRITE)
+    assert off.status_code == 200
+    assert off.json()["net_gadget"]["enabled"] is False
+    assert {"action": "net-gadget", "enabled": False} in env.helper.requests
+
+    on = client.put("/api/system/net-gadget", json={"enabled": True}, headers=WRITE)
+    assert on.json()["net_gadget"]["enabled"] is True
+    # No free-form input reaches the helper.
+    bad = client.put("/api/system/net-gadget", json={"enabled": True, "address": "1.2.3.4"}, headers=WRITE)
+    assert bad.status_code == 422
+
+
+def test_a_helper_without_the_usb_c_link_reports_none(client, env, monkeypatch):
+    monkeypatch.setattr(type(env.helper), "_handle", lambda self, request: {"ssh": dict(self.ssh), "users": []})
+    assert client.get("/api/system").json()["net_gadget"] is None
 
 
 # --- the guard ---------------------------------------------------------------

@@ -22,6 +22,7 @@ class FakeSystemHelper:
     def __init__(self, path: Path, users: list[str] | None = None):
         self.path = path
         self.ssh = {"installed": True, "enabled": False, "running": False}
+        self.net_gadget = {"installed": True, "enabled": True, "active": True}
         self.users = {name: {"password": None, "keys": []} for name in (users or [])}
         # Every request received, for tests to look at.
         self.requests: list[dict] = []
@@ -69,10 +70,14 @@ class FakeSystemHelper:
     def _handle(self, request: dict) -> dict:
         action = request.get("action")
         if action == "status":
-            return {"ssh": dict(self.ssh), "users": self._status_users()}
+            return {"ssh": dict(self.ssh), "net_gadget": dict(self.net_gadget), "users": self._status_users()}
         if action == "ssh":
             self.ssh["enabled"] = self.ssh["running"] = bool(request["enabled"])
             return {"ssh": dict(self.ssh)}
+
+        if action == "net-gadget":
+            self.net_gadget["enabled"] = self.net_gadget["active"] = bool(request["enabled"])
+            return {"net_gadget": dict(self.net_gadget)}
 
         name = request.get("user")
         if action == "set-password":

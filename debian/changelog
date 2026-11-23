@@ -1,3 +1,12 @@
+midwire-web-ui (0.4.0) unstable; urgency=medium
+
+  * Network tab: switch for the network link over the USB-C cable that
+    midwire-base 0.4.0 provides while the proxy is idle.
+  * Proxy tab: warn before starting the proxy when the page itself is
+    reached over that cable, since starting takes the port.
+
+ -- Sidhant Goel <sidhant@hexcod.in>  Mon, 23 Nov 2026 04:00:00 +0000
+
 midwire-web-ui (0.3.0) unstable; urgency=medium
 
   * Setup wizard after login while the admin password or the Wi-Fi

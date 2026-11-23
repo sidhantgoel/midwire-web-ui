@@ -173,6 +173,10 @@ export interface SystemStatus {
   // keys cannot be changed until it is a real one.
   locked: boolean;
   ssh?: { installed: boolean; enabled: boolean; running: boolean };
+  // The network link over the USB-C port while the proxy is idle. Null on a
+  // device whose midwire-base is older than that feature. "active" is false
+  // while the proxy has the port.
+  net_gadget?: { installed: boolean; enabled: boolean; active: boolean } | null;
   users?: SystemUser[];
 }
 
